@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"io/ioutil"
+	"net/http"
 )
 
 type Page struct {
@@ -10,9 +12,34 @@ type Page struct {
 	Body  []byte
 }
 
+func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
+	t := template.New(tmpl)
+	t, _ = t.ParseFiles(tmpl + ".html")
+	t.Execute(w, p)
+}
+
+func viewHandler(w http.ResponseWriter, r *http.Request) {
+	title := r.URL.Path[len("/view/"):]
+	p, err := loadPage(title)
+	if err != nil {
+		http.Redirect(w, r, "/edit/"+title, http.StatusFound)
+		fmt.Printf("Error here %s", err)
+		return
+	}
+	renderTemplate(w, "view", p)
+}
+
+func editHandler(w http.ResponseWriter, r *http.Request) {
+	title := r.URL.Path[len("/edit/"):]
+	p, err := loadPage(title)
+	if err != nil {
+		p = &Page{Title: title}
+	}
+	renderTemplate(w, "edit", p)
+}
+
 func (p *Page) save() error {
 	filename := p.Title + ".txt"
-	fmt.Printf("Writing %s to file", p.Title)
 	return ioutil.WriteFile(filename, p.Body, 0600)
 }
 
@@ -26,8 +53,13 @@ func loadPage(title string) (*Page, error) {
 }
 
 func main() {
-	page1 := &Page{Title: "Testpage", Body: []byte("Data sample page")}
-	page1.save()
-	load1, _ := loadPage("Testpage")
-	fmt.Println(string(load1.Body))
+	http.HandleFunc("/view/", viewHandler)
+	http.HandleFunc("/edit/", editHandler)
+	// http.HandleFunc("/save/", saveHandler)
+	http.ListenAndServe(":8080", nil)
+
+	// page1 := &Page{Title: "Testpage", Body: []byte("Data sample page")}
+	// page1.save()
+	// load1, _ := loadPage("Testpage")
+	// fmt.Println(string(load1.Body))
 }

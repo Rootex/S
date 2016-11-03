@@ -13,8 +13,10 @@ type Page struct {
 }
 
 func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
-	t := template.New(tmpl)
-	t, _ = t.ParseFiles(tmpl + ".html")
+	t, err := template.ParseFiles("src/" + tmpl + ".html")
+	if err != nil {
+		fmt.Printf("Error here %s", err)
+	}
 	t.Execute(w, p)
 }
 
@@ -38,6 +40,14 @@ func editHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "edit", p)
 }
 
+func saveHandler(w http.ResponseWriter, r *http.Request) {
+	title := r.URL.Path[len("/save/"):]
+	body := r.FormValue("body")
+	p := &Page{Title: title, Body: []byte(body)}
+	p.save()
+	http.Redirect(w, r, "/view/"+title, http.StatusFound)
+}
+
 func (p *Page) save() error {
 	filename := p.Title + ".txt"
 	return ioutil.WriteFile(filename, p.Body, 0600)
@@ -55,7 +65,7 @@ func loadPage(title string) (*Page, error) {
 func main() {
 	http.HandleFunc("/view/", viewHandler)
 	http.HandleFunc("/edit/", editHandler)
-	// http.HandleFunc("/save/", saveHandler)
+	http.HandleFunc("/save/", saveHandler)
 	http.ListenAndServe(":8080", nil)
 
 	// page1 := &Page{Title: "Testpage", Body: []byte("Data sample page")}

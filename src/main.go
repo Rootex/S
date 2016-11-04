@@ -13,11 +13,16 @@ type Page struct {
 }
 
 func renderTemplate(w http.ResponseWriter, tmpl string, p *Page) {
-	t := template.New(tmpl)
-	t, _ = t.ParseFiles(tmpl + ".html")
-	t.Execute(w, p)
+	t, err := template.New("view").Parse(tmpl + ".html")
+	if err != nil {
+		fmt.Println(err)
+	}
+	err = t.Execute(w, p)
 }
 
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Index Page %s", r.URL.Path[1:])
+}
 func viewHandler(w http.ResponseWriter, r *http.Request) {
 	title := r.URL.Path[len("/view/"):]
 	p, err := loadPage(title)
@@ -53,6 +58,7 @@ func loadPage(title string) (*Page, error) {
 }
 
 func main() {
+	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/view/", viewHandler)
 	http.HandleFunc("/edit/", editHandler)
 	// http.HandleFunc("/save/", saveHandler)
